@@ -2,15 +2,48 @@
 
 맥 카카오톡의 하단 광고 자리에 직접 선택한 이미지를 표시하는 독립적인 macOS 앱입니다. SwiftUI와 Apple Network/Security 프레임워크로 작성했으며 외부 패키지는 사용하지 않습니다.
 
-## 앱 다운로드
+## 설치
 
-[GitHub Releases에서 받기](https://github.com/Jaehyeon1020/TalkFrame/releases/latest)
+[GitHub Releases에서 설치 파일 받기](https://github.com/Jaehyeon1020/TalkFrame/releases/latest)
 
-첨부한 ZIP은 **Apple Silicon(arm64) Mac용**입니다. 압축을 풀고 `TalkFrame.app`을 응용 프로그램 폴더로 옮겨 실행해 주세요. 로컬 ad-hoc 서명 앱이므로 macOS가 실행을 차단하면 시스템 설정 → 개인정보 보호 및 보안에서 허용해야 할 수 있습니다. 비공개 저장소의 릴리스는 접근 권한이 있는 GitHub 계정으로 로그인해야 볼 수 있습니다.
+### PKG 설치
+
+`TalkFrame-버전-macos-universal.pkg`를 열고 설치 안내를 따라 주세요. Apple Silicon과 Intel용 실행 파일을 함께 포함하며 `/Applications/TalkFrame.app`에 설치합니다. 설치 후 응용 프로그램 폴더에서 톡프레임을 열고 이미지를 고른 뒤 **이미지 적용**을 누릅니다.
+
+PKG는 앱만 설치합니다. 로컬 광고 서버와 hosts 설정, 사용자 인증서 신뢰는 앱에서 처음 이미지를 적용할 때 구성합니다. 앱 종료 후에도 서버는 계속 실행됩니다. 제거할 때는 앱에서 **원래 설정으로 복구**를 먼저 사용해 주세요.
+
+현재 개인 배포용으로 PKG는 서명되지 않았고, 앱은 로컬 ad-hoc 서명입니다. Apple 공증을 받지 않았으므로 다른 Mac에서 실행을 차단하면 시스템 설정 → 개인정보 보호 및 보안에서 설치/실행을 허용해야 할 수 있습니다.
+
+### Homebrew
+
+`konfirm`처럼 릴리스 파일의 버전과 SHA-256을 고정한 tap 구성을 사용하며, GUI 앱이므로 Cask로 설치합니다. **로그인이나 GitHub CLI 의존성은 없습니다. 저장소와 릴리스가 공개된 뒤 아래 명령을 사용할 수 있습니다.** 비공개 상태에서는 GitHub가 익명 다운로드를 허용하지 않습니다. 이 설정은 저장소의 공개 여부를 변경하지 않습니다.
+
+```sh
+brew tap Jaehyeon1020/talkframe https://github.com/Jaehyeon1020/TalkFrame.git
+brew install --cask Jaehyeon1020/talkframe/talkframe
+open /Applications/TalkFrame.app
+```
+
+다른 이름의 저장소에서 tap을 가져오는 경우를 지원하기 위해 위와 같이 원격 주소를 명시합니다. Cask는 표준 GitHub Releases ZIP URL로 내려받으며 인증 헤더나 토큰을 사용하지 않습니다.
+
+업데이트:
+
+```sh
+brew update
+brew upgrade --cask Jaehyeon1020/talkframe/talkframe
+```
+
+삭제는 먼저 앱에서 **원래 설정으로 복구**를 실행한 뒤 아래 명령을 사용해 주세요. Homebrew에서 앱만 제거하면 백그라운드 서버와 hosts 설정은 남습니다.
+
+```sh
+brew uninstall --cask Jaehyeon1020/talkframe/talkframe
+```
+
+ZIP을 직접 내려받아 압축을 풀고 앱을 응용 프로그램 폴더로 옮기는 방식도 지원합니다. 모든 배포 파일에 SHA-256 파일을 함께 제공합니다.
 
 ## 실행
 
-macOS 13 이상과 Apple Command Line Tools가 필요합니다. 현재 빌드는 **빌드한 Mac의 아키텍처**를 대상으로 합니다.
+macOS 13 이상과 Apple Command Line Tools가 필요합니다. 기본 빌드는 빌드한 Mac의 아키텍처를 대상으로 합니다. `./build.sh --universal`로 Apple Silicon과 Intel 실행 파일을 함께 만들 수 있습니다. Intel 코드는 교차 컴파일로 생성하며 실제 Intel 하드웨어에서 실행 검증은 별도로 필요합니다.
 
 ```sh
 ./build.sh
@@ -63,7 +96,11 @@ hosts는 Mac 전체에 영향을 줍니다. 다른 앱의 같은 광고 도메�
 ```sh
 ./build.sh
 zsh scripts/test.sh
-zsh scripts/package.sh  # 빌드한 앱의 배포용 ZIP과 SHA-256 생성
+# 배포 파일 준비
+./build.sh --universal
+zsh scripts/package.sh       # universal ZIP과 SHA-256
+zsh scripts/make-pkg.sh      # PKG 설치 파일과 SHA-256
+python3 scripts/update-cask.py  # ZIP 체크섬으로 Cask 갱신
 ```
 
 테스트는 임시 테스트 인증서와 `127.0.0.1`의 임의 고포트를 사용합니다. 관리자 권한, hosts 변경, 인증서 신뢰 등록은 하지 않습니다. 이미지 축소/잘못된 파일, 선택 영역의 픽셀 위치·크기와 좌표 저장, 편집 드래그 범위, 인증서 검증을 거친 HTTPS 광고 응답, 원본 이미지 전달, 설정 교체 반영, JavaScript 로딩 신호/변경 루프, 토큰 검사, 잘못된 설정 복구를 확인합니다. Python 3와 Node.js가 필요합니다.
@@ -78,3 +115,11 @@ Tests/                이미지 변환, HTTPS 통합, JavaScript 검증
 ```
 
 현재는 초기 프로토타입입니다. 테스트의 가짜 웹뷰 객체는 실제 카카오톡 웹뷰와 다르므로 **실제 카카오톡의 광고 수용과 실시간 이미지 교체는 설치 후 별도 확인이 필요합니다.** 광고 서버 규격이나 카카오톡의 인증서 정책이 바뀌면 동작하지 않을 수 있습니다. 앱은 로컬 ad-hoc 서명이며 Apple 공증은 받지 않았습니다.
+
+## 앱 아이콘
+
+말풍선 안에 산과 해가 있는 사진을 넣은 아이콘입니다. `Resources/AppIcon.svg`에 벡터 원본을, `Resources/AppIcon.png`와 `Resources/AppIcon.icns`에 배포용 파일을 보관합니다. `scripts/draw-icon.swift`와 `scripts/make-icon.sh`가 해상도별 PNG 및 ICNS를 생성하며 앱 빌드에 포함됩니다.
+
+## 릴리스 업데이트
+
+`Resources/Info.plist`의 버전을 갱신하고 위 순서대로 universal 빌드, ZIP, PKG, Cask를 생성합니다. 소스 코드와 Cask를 커밋한 후 같은 버전의 GitHub Release에 ZIP·PKG·각 SHA-256 파일을 첨부합니다. URL과 체크섬이 버전별로 고정되므로 이미 공개한 버전의 ZIP을 교체하는 대신 새 버전을 배포해 주세요.
